@@ -67,14 +67,14 @@ __interrupt void ADC12_ISR(void)
     	 else if(ADC12MEM0 >0x480 & ADC12MEM0 <0x580 & flag==1)
     	 {
     		 ADC_Result[i]=ADC12MEM0;
-    		 P1OUT |= ~BIT0; // P1.0 = 0
+    		 P1OUT &= ~BIT0; // P1.0 = 0
     		 i=i+1;
     		 flag=0;
     	 }
     	 else if(ADC12MEM0 >0x950 & ADC12MEM0 <0xA80 & flag==1)
     	 {
     		 ADC_Result[i]=ADC12MEM0;
-    	     P1OUT |= ~BIT0; // P1.0 = 0
+    	     P1OUT &= ~BIT0; // P1.0 = 0
     		 i=i+1;
     		 flag=0;
     	 }
