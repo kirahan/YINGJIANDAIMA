@@ -1,9 +1,9 @@
 #include<msp430.h>
-unsigned int ADC_Result[128];
-unsigned int i=0;
+unsigned int *ADC_Result;
+unsigned int count=0;
 unsigned int flag=0;
 
-
+#define FRAM_TEST_START 0xD000
 int main(void)
 {
 	  WDTCTL = WDTPW | WDTHOLD;                 // Stop WDT
@@ -22,6 +22,7 @@ int main(void)
 	      PM5CTL0 &= ~LOCKLPM5;
 	      while(REFCTL0 & REFGENBUSY);              // If ref generator busy, WAIT
 	      REFCTL0 |= REFVSEL_3 | REFON;             // Select internal ref = 2.5V
+	      //   _delay_cycles(75);                       // reference settling ~75us
 
 	      // Configure ADC12
 	      ADC12CTL0 = ADC12SHT0_2 | ADC12ON;         			// 16 click cycle for sample-and-hold time.
@@ -31,10 +32,13 @@ int main(void)
 	      ADC12IER0 |= ADC12IE0;                    // Enable ADC conv complete interrupt
 	      ADC12MCTL0 |= ADC12INCH_3 | ADC12VRSEL_0; // A3 ADC input select; 0-3.3v
 
-	      //   _delay_cycles(75);                       // reference settling ~75us
+	      ADC_Result= (unsigned int *)FRAM_TEST_START;
+
+
 
 	      while(1)
 	      {
+
 	    	//   __delay_cycles(5000);                    // Delay between conversions
 	    	  ADC12CTL0 |= ADC12ENC + ADC12SC;
 	        __bis_SR_register(LPM0_bits + GIE);
@@ -57,28 +61,28 @@ __interrupt void ADC12_ISR(void)
     case  8: break;                         // Vector  8:  ADC12LO
     case 10: break;                         // Vector 10:  ADC12IN
     case 12:
-    	 if (ADC12MEM0 <0x400 & flag==0)               // ADC12MEM = A1 > 0.5V?
+     if (ADC12MEM0 <0x400 & flag==0)               // ADC12MEM = A1 > 0.5V?
     	 {
-    		 P1OUT |= BIT0; // P1.0 = 1
-    	 	 ADC_Result[i]=ADC12MEM0;
-    	 	 i=i+1;
+    	 	 P1OUT &= ~BIT0; // P1.0 = 0
+    	 	 *ADC_Result++=ADC12MEM0;
+    	 	 count=count+1;
     	 	 flag=1;
     	 }
-    	 else if(ADC12MEM0 >0x480 & ADC12MEM0 <0x580 & flag==1)
+    	 else if(ADC12MEM0 >0x4B0 & ADC12MEM0 <0x580 & flag==1)
     	 {
-    		 ADC_Result[i]=ADC12MEM0;
-    		 P1OUT &= ~BIT0; // P1.0 = 0
-    		 i=i+1;
+    		 *ADC_Result++=ADC12MEM0;
+    		 P1OUT |= BIT0; // P1.0 = 1
+    		 count=count+1;
     		 flag=0;
     	 }
-    	 else if(ADC12MEM0 >0x950 & ADC12MEM0 <0xA80 & flag==1)
+    	 else if(ADC12MEM0 >0x950 & ADC12MEM0 <0xB40 & flag==1)
     	 {
-    		 ADC_Result[i]=ADC12MEM0;
-    	     P1OUT &= ~BIT0; // P1.0 = 0
-    		 i=i+1;
-    		 flag=0;
-    	 }
+    		 *ADC_Result++=ADC12MEM0;
+    		 P1OUT |= BIT0; // P1.0 = 1
 
+    	     count=count+1;
+    		 flag=0;
+    	 }
     __bic_SR_register_on_exit(LPM0_bits); // Exit active CPU// Vector 12:  ADC12MEM0 Interrupt
       break;                                // Clear CPUOFF bit from 0(SR)
     case 14:break;                         // Vector 14:  ADC12MEM1
