@@ -1,9 +1,23 @@
 #include<msp430.h>
+#include<string.h>
+void store_singlechanel(int *register_address,int *flag, int flag_turn );
 unsigned int *ADC_Result;
 unsigned int count=0;
-unsigned int flag=0;
+
+int flag_red=0;
+int flag_yellow=0;
+int flag_green=0;
+int flag_white=0;
+int flag_orange=0;
+int flag_blue=0;
 
 #define FRAM_TEST_START 0xD000
+#define turn_red 0x2000
+#define turn_yellow 0x3000
+#define turn_green 0x4000
+#define turn_white 0x5000
+#define turn_orange 0x6000
+#define turn_blue 0x7000
 int main(void)
 {
 	  WDTCTL = WDTPW | WDTHOLD;                 // Stop WDT
@@ -13,9 +27,17 @@ int main(void)
 	      P1DIR = BIT0;                             // For LED
 
 
-
-	      P1SEL0 |= BIT3;							//set P1.3 for ADC input port
-	      P1SEL1 |= BIT3;
+	    //set ADC input ports
+	    //P1.2 for  'red'
+		//P1.3 for 	'yellow'
+		//P1.4 for 	'green'
+		//P1.5 for 	'white'
+		//P1.6 for 	'orange'
+		//P1.7 for 	'blue'
+	      P1SEL0 |= BIT3 ;
+	      P1SEL1 |= BIT3 ;
+	      //	      P1SEL0 |= BIT2 | BIT3 | BIT4 | BIT5 | BIT6 | BIT7;
+	      //	      P1SEL1 |= BIT2 | BIT3 | BIT4 | BIT5 | BIT6 | BIT7;
 
 	      // Disable the GPIO power-on default high-impedance mode to activate
 	      // previously configured port settings
@@ -27,11 +49,16 @@ int main(void)
 	      // Configure ADC12
 	      ADC12CTL0 = ADC12SHT0_2 | ADC12ON;         			// 16 click cycle for sample-and-hold time.
 	      ADC12CTL1 = ADC12SHP | ADC12PDIV_3 |ADC12DIV_7 | ADC12SSEL_2; 		// SAMPON form the sampling timer, ADC predivider by 64, clock divider by 8, CLOCK SOURCE SELECT MCLK= 1MHZ
-	      //ADC12CTL1 = ADC12SHP;                     // ADCCLK = MODOSC; sampling timer
 	      ADC12CTL2 |= ADC12RES_2;                  // 12-bit conversion results
-	      ADC12IER0 |= ADC12IE0;                    // Enable ADC conv complete interrupt
+	      ADC12IER0 |= ADC12IE0;
+	      //	      ADC12IER0 |= ADC12IE0 | ADC12IE1 | ADC12IE2 | ADC12IE3 | ADC12IE4 | ADC12IE5;                    // Enable ADC conv complete interrupts
 	      ADC12MCTL0 |= ADC12INCH_3 | ADC12VRSEL_0; // A3 ADC input select; 0-3.3v
-
+	      //	      ADC12MCTL0 |= ADC12INCH_2 | ADC12VRSEL_0; // A2 ADC input select; 0-3.3v
+	      //	      ADC12MCTL1 |= ADC12INCH_3 | ADC12VRSEL_0; // A3 ADC input select; 0-3.3v
+	      //	      ADC12MCTL2 |= ADC12INCH_4 | ADC12VRSEL_0; // A4 ADC input select; 0-3.3v
+	      //	      ADC12MCTL3 |= ADC12INCH_5 | ADC12VRSEL_0; // A5 ADC input select; 0-3.3v
+	      //	      ADC12MCTL4 |= ADC12INCH_6 | ADC12VRSEL_0; // A6 ADC input select; 0-3.3v
+	      //	      ADC12MCTL5 |= ADC12INCH_7 | ADC12VRSEL_0; // A7 ADC input select; 0-3.3v
 	      ADC_Result= (unsigned int *)FRAM_TEST_START;
 
 
@@ -41,7 +68,7 @@ int main(void)
 
 	    	//   __delay_cycles(5000);                    // Delay between conversions
 	    	  ADC12CTL0 |= ADC12ENC + ADC12SC;
-	        __bis_SR_register(LPM0_bits + GIE);
+	    	  __bis_SR_register(LPM0_bits + GIE);
 	        __no_operation();                        // For debug only
 	      }
 
@@ -60,36 +87,24 @@ __interrupt void ADC12_ISR(void)
     case  6: break;                         // Vector  6:  ADC12HI
     case  8: break;                         // Vector  8:  ADC12LO
     case 10: break;                         // Vector 10:  ADC12IN
-    case 12:
-     if (ADC12MEM0 <0x400 & flag==0)               // ADC12MEM = A1 > 0.5V?
-    	 {
-    	 	 P1OUT &= ~BIT0; // P1.0 = 0
-    	 	 *ADC_Result++=ADC12MEM0;
-    	 	 count=count+1;
-    	 	 flag=1;
-    	 }
-    	 else if(ADC12MEM0 >0x4B0 & ADC12MEM0 <0x580 & flag==1)
-    	 {
-    		 *ADC_Result++=ADC12MEM0;
-    		 P1OUT |= BIT0; // P1.0 = 1
-    		 count=count+1;
-    		 flag=0;
-    	 }
-    	 else if(ADC12MEM0 >0x950 & ADC12MEM0 <0xB40 & flag==1)
-    	 {
-    		 *ADC_Result++=ADC12MEM0;
-    		 P1OUT |= BIT0; // P1.0 = 1
+    case 12:								//red facet
+    	store_singlechanel((int *)&ADC12MEM0,(int *)&flag_red, turn_red );
+    	__bic_SR_register_on_exit(LPM0_bits); // Exit active CPU
 
-    	     count=count+1;
-    		 flag=0;
-    	 }
-    __bic_SR_register_on_exit(LPM0_bits); // Exit active CPU// Vector 12:  ADC12MEM0 Interrupt
       break;                                // Clear CPUOFF bit from 0(SR)
-    case 14:break;                         // Vector 14:  ADC12MEM1
-    case 16:break;                          // Vector 16:  ADC12MEM2
-    case 18: break;                         // Vector 18:  ADC12MEM3
-    case 20: break;                         // Vector 20:  ADC12MEM4
-    case 22: break;                         // Vector 22:  ADC12MEM5
+    case 14:								//yellow facet
+    	break;                         // Vector 14:  ADC12MEM1
+    case 16:							//green facet
+    	break;                          // Vector 16:  ADC12MEM2
+    case 18:							//white facet
+
+    	break;                         // Vector 18:  ADC12MEM3
+    case 20:							//orange facet
+
+    	break;                         // Vector 20:  ADC12MEM4
+    case 22:							//blue facet
+
+    	break;                         // Vector 22:  ADC12MEM5
     case 24: break;                         // Vector 24:  ADC12MEM6
     case 26: break;                         // Vector 26:  ADC12MEM7
     case 28: break;                         // Vector 28:  ADC12MEM8
@@ -119,4 +134,29 @@ __interrupt void ADC12_ISR(void)
     case 76: break;                         // Vector 76:  ADC12RDY
     default: break;
   }
+}
+
+void store_singlechanel(int *register_address,int *flag, int flag_turn ){
+	if (*register_address <0x400 & *flag==0)               // start
+	    	    	 {
+	    	    	 	 P1OUT &= ~BIT0; // P1.0 = 0
+	    	    	 	 *ADC_Result++=flag_turn | *register_address;
+	    	    	 	 count=count+1;
+	    	    	 	*flag=1;
+	    	    	 }
+	    	    	 else if(*register_address >0x4B0 & *register_address <0x580 & *flag==1) // low voltage
+	    	    	 {
+	    	    		 *ADC_Result++=flag_turn | *register_address;
+	    	    		 P1OUT |= BIT0; // P1.0 = 1
+	    	    		 count=count+1;
+	    	    		 *flag=0;
+	    	    	 }
+	    	    	 else if(*register_address >0x950 & *register_address <0xB40 & *flag==1)
+	    	    	 {
+	    	    		 *ADC_Result++=flag_turn | *register_address;
+	    	    		 P1OUT |= BIT0; // P1.0 = 1
+	    	    	     count=count+1;
+	    	    	     *flag=0;
+	    	    	 }
+
 }
