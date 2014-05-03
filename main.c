@@ -2,6 +2,7 @@
 #include<string.h>
 void store_singlechanel(int *register_address,int *flag, int flag_turn );
 unsigned int *ADC_Result;
+unsigned int *TIME_Result;
 unsigned int count=0;
 
 int flag_red=1;
@@ -12,6 +13,7 @@ int flag_orange=1;
 int flag_blue=1;
 
 #define FRAM_TEST_START 0xD000
+#define FRAM_TIME_STORAGE_ADDRESS 0XE000
 #define turn_red 0x2000
 #define turn_yellow 0x3000
 #define turn_green 0x4000
@@ -40,7 +42,8 @@ int main(void)
 
 		  P1SEL0 |= BIT2 | BIT3 | BIT4 | BIT5 ;
 		  P1SEL1 |= BIT2 | BIT3 | BIT4 | BIT5 ;
-	      P2SEL0 |=	BIT3 ;
+
+		  P2SEL0 |=	BIT3 ;
 		  P2SEL1 |= BIT3 ;
 
 		  P4SEL0 |=	BIT3 ;
@@ -61,17 +64,18 @@ int main(void)
 	      ADC12IER0 |= ADC12IE0 | ADC12IE1 | ADC12IE2 | ADC12IE3 | ADC12IE4 | ADC12IE5;                    // Enable ADC conv complete interrupts
 	      	      ADC12MCTL0 |= ADC12INCH_2 | ADC12VRSEL_0; // A2 ADC input select; 0-3.3v
 	      	      ADC12MCTL1 |= ADC12INCH_3 | ADC12VRSEL_0; // A3 ADC input select; 0-3.3v
-	      	      ADC12MCTL2 |= ADC12INCH_4 | ADC12VRSEL_0; // A12 ADC input select; 0-3.3v
+	      	      ADC12MCTL2 |= ADC12INCH_4 | ADC12VRSEL_0; // A4 ADC input select; 0-3.3v
 	      	      ADC12MCTL3 |= ADC12INCH_5 | ADC12VRSEL_0; // A5 ADC input select; 0-3.3v
 	      	      ADC12MCTL4 |= ADC12INCH_7 | ADC12VRSEL_0 ; // A7 ADC input select; 0-3.3v
-	      	       ADC12MCTL5 |= ADC12INCH_11 | ADC12VRSEL_0 | ADC12EOS; // A11 ADC input select; 0-3.3v
+	      	      ADC12MCTL5 |= ADC12INCH_11 | ADC12VRSEL_0 | ADC12EOS; // A11 ADC input select; 0-3.3v
 
-	      	      //	      	      ADC12IER0 |= ADC12IE1;
+	      	      // ADC12IER0 |= ADC12IE5;
 	      	      //ADC12MCTL2 |= ADC12INCH_3 | ADC12VRSEL_0 | ADC12EOS; // A3 ADC input select; 0-3.3v
 
 	      ADC_Result= (unsigned int *)FRAM_TEST_START;
-
-
+	      TIME_Result= (unsigned int*)FRAM_TIME_STORAGE_ADDRESS;
+//	      	    	  ADC12CTL0 |= ADC12ENC + ADC12SC;
+//	      	    	  __bis_SR_register(LPM0_bits + GIE);
 
 	      while(1)
 	      {
@@ -156,6 +160,7 @@ void store_singlechanel(int *register_address,int *flag, int flag_turn ){
 	if (*register_address <0x400 & *flag==0)               // start
 	    	    	 {
 	    	    	 	 P1OUT &= ~BIT0; // P1.0 = 0
+
 	    	    	 	 *ADC_Result++=flag_turn | *register_address;
 	    	    	 	 count=count+1;
 	    	    	 	*flag=1;
@@ -164,6 +169,7 @@ void store_singlechanel(int *register_address,int *flag, int flag_turn ){
 	    	    	 {
 	    	    		 *ADC_Result++=flag_turn | *register_address;
 	    	    		 P1OUT |= BIT0; // P1.0 = 1
+
 	    	    		 count=count+1;
 	    	    		 *flag=0;
 	    	    	 }
@@ -171,6 +177,7 @@ void store_singlechanel(int *register_address,int *flag, int flag_turn ){
 	    	    	 {
 	    	    		 *ADC_Result++=flag_turn | *register_address;
 	    	    		 P1OUT |= BIT0; // P1.0 = 1
+
 	    	    	     count=count+1;
 	    	    	     *flag=0;
 	    	    	 }
