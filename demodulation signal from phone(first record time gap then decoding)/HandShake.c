@@ -7,10 +7,6 @@
 #include <msp430.h>
 #include "HandShake.h"
 
-
-
-
-
 //for record phone data
 unsigned int start_flag=0;
 unsigned int data_counter=0;
@@ -82,6 +78,7 @@ if(TA1CCTL1 & BIT0)                 // interrupt CCIFG
 		}
 		else
 		{
+			TA1CCTL1 &= ~CCIE;
 			TA1IV = 0X0;
 			TA1CTL |= TACLR;
 		__bic_SR_register_on_exit(LPM0_bits); // Exit active CPU
@@ -163,7 +160,7 @@ void HANDS_REGISTER_INIT()
 void HANDS_DECODING()
 {
 	TimerA_value=(unsigned int *)timerA_value_address;                      //back to first data
-	for(;data_counter>1;data_counter--,TimerA_value++)											    // start decoding
+	for(;data_counter>0;data_counter--,TimerA_value++)											    // start decoding
 	{
 		switch(State)
 		{
